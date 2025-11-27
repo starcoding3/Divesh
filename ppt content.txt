@@ -1,0 +1,57 @@
+What is a PURE AGENT?
+In a pure agentic system LLM decides everything like this:
+	When to call tools
+	Which tool to call
+	What order to call them
+	How many times to call tools
+	When reasoning is “done”
+The LLM drives the process, like:
+	LLM → Tool → LLM → Tool → LLM → ... → Final Answer
+
+This is often called:
+	ReAct (Reason + Act)
+	Tool Calling loops
+	Autonomous agents
+
+LLM is in control. We give it tools, and it chooses the flow dynamically.
+
+What is a SIMPLE WORKFLOW?
+A simple workflow is the opposite. Developer decides the whole flow:
+Step 1 → Step 2 → Step 3 → END
+
+No decisions by the LLM.
+No tool choice by the LLM.
+Everything is deterministic.
+
+Hybrid approach:
+Our system is hybrid because:
+	1. The outer structure (architecture generation → diagram → NFR review)
+	is controlled by a deterministic workflow, not the LLM.
+
+	2. The inner logic of each step
+	uses an LLM behaving like a domain-specific mini-agent.
+
+	3. The LLM does not choose tools or call steps dynamically —
+	but it performs intelligent reasoning within each step.
+
+So it’s a precise combination of:
+🟦 Workflow for orchestration
+🟩 Agent-like intelligence inside each LLM call
+
+That’s why it’s not pure agentic — and not pure workflow — but a hybrid agent system.
+
+Agentic vs Hybrid approach:
+Pure agents are:
+	Harder to control
+	Prone to hallucinating tool usage
+	Sometimes get stuck in loops
+	Less predictable timing
+	Hard to debug
+
+Hybrid approach gives:
+	✔ Stability
+	✔ Predictability
+	✔ Clear user experience
+	✔ Statefulness (thanks to LangGraph + MemorySaver)
+	✔ Two expert-agent steps (Architecture + NFR)
+	✔ Zero chance of agent loops

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Architecture Design Assistant (AI)</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+    }
+
+    header {
+      background: #111827;
+      color: #f9fafb;
+      padding: 1rem 1.5rem;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    header p {
+      margin: 0.25rem 0 0;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1.4fr 2.6fr; /* 35% left, 65% right */
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      height: calc(100vh - 72px);
+      box-sizing: border-box;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .panel-body {
+      padding: 0.75rem 1rem;
+      overflow: auto;
+    }
+
+    .input-area {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    textarea {
+      flex: 1;
+      resize: vertical;
+      min-height: 60px;
+      max-height: 160px;
+      font-family: inherit;
+      border-radius: 0.5rem;
+      border: 1px solid #d1d5db;
+      padding: 0.5rem 0.6rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      font-weight: 500;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .message {
+      margin-bottom: 0.75rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .message-label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 0.15rem;
+    }
+
+    .message.user {
+      background: #eff6ff;
+      border-radius: 0.6rem;
+      padding: 0.4rem 0.6rem;
+    }
+
+    .message.assistant {
+      background: #f9fafb;
+      border-radius: 0.6rem;
+      padding: 0.4rem 0.6rem;
+    }
+
+    .diagram-container {
+      text-align: center;
+    }
+
+    .diagram-container img {
+      max-width: 100%;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+    }
+
+    .dot-area {
+      margin-top: 0.75rem;
+    }
+
+    .dot-area textarea {
+      width: 100%;
+      min-height: 120px;
+      max-height: none;
+      font-family: "Fira Code", "Consolas", monospace;
+      font-size: 0.8rem;
+      background: #0f172a;
+      color: #e5e7eb;
+      border-color: #1f2937;
+    }
+
+    .meta {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Architecture Design Assistant</h1>
+  <p>An ai based assistant</p>
+</header>
+
+<main>
+  <!-- Left: Conversation / Requirements -->
+  <section class="panel">
+    <div class="panel-header">Conversation</div>
+    <div class="panel-body" id="chat">
+      <div class="message assistant">
+        <div class="message-label">Assistant</div>
+        <div>
+          Hi, Describe your IT system (domain, scale, constraints, tech preferences, etc.)
+          and I will suggest an architecture and generate a diagram.
+        </div>
+      </div>
+    </div>
+    <div class="input-area">
+      <textarea id="userInput" placeholder="E.g. We need an e-commerce platform with web + mobile, microservices, and separate read/write DBs..."></textarea>
+      <button id="sendBtn">Generate</button>
+    </div>
+  </section>
+
+  <!-- Right: Output / Diagram / DOT -->
+  <section class="panel">
+    <div class="panel-header">Architecture Output</div>
+    <div class="panel-body">
+      <div id="summary" class="message assistant" style="display:none;"></div>
+
+      <div id="patternInfo" class="meta"></div>
+
+      <div class="diagram-container" id="diagramContainer" style="display:none;">
+        <p>
+            Auto generated diagram (using Graphviz).
+            <a id="openDiagramLink" href="#" target="_blank">Click here to open in new tab</a>
+        </p>
+
+        <img id="diagramImage" src="" alt="Architecture Diagram" />
+      </div>
+
+      <div class="dot-area" id="dotArea" style="display:none;">
+        <p class="meta">
+          Graphviz DOT source (editable). You can paste this into Graphviz, PlantUML,
+          or other diagram tools that support DOT.
+        </p>
+        <textarea id="dotText" readonly></textarea>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const chatEl = document.getElementById("chat");
+  const userInputEl = document.getElementById("userInput");
+  const sendBtnEl = document.getElementById("sendBtn");
+  const summaryEl = document.getElementById("summary");
+  const patternInfoEl = document.getElementById("patternInfo");
+  const diagramContainerEl = document.getElementById("diagramContainer");
+  const diagramImageEl = document.getElementById("diagramImage");
+  const dotAreaEl = document.getElementById("dotArea");
+  const dotTextEl = document.getElementById("dotText");
+
+  // Accumulated requirements across this browser session
+  let messageHistory = [];
+
+  // Unique conversation id for this browser tab (used by backend LangGraph memory)
+  const conversationId = (crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).substring(2));
+
+  function appendMessage(role, text) {
+    const div = document.createElement("div");
+    div.className = "message " + role;
+    const label = document.createElement("div");
+    label.className = "message-label";
+    label.textContent = role === "user" ? "You" : "Assistant";
+    const body = document.createElement("div");
+    body.textContent = text;
+    div.appendChild(label);
+    div.appendChild(body);
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const text = userInputEl.value.trim();
+    if (!text) return;
+
+    appendMessage("user", text);
+
+    // Clear input and disable button while thinking
+    userInputEl.value = "";
+    sendBtnEl.disabled = true;
+    sendBtnEl.textContent = "Thinking…";
+
+    // Build payload: send previous prompts as history, and current text as message
+    const payload = {
+      message: text,
+      history: messageHistory,
+      conversation_id: conversationId
+    };
+
+    // After building payload, push current message into history
+    messageHistory.push(text);
+
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({}));
+        const msg = errorData.error || "Unexpected error from server.";
+        appendMessage("assistant", "Error: " + msg);
+        return;
+      }
+
+      const data = await resp.json();
+      console.log("API response:", data);
+
+      // Show summary with timestamp so you can see it changed
+      const ts = new Date().toLocaleTimeString();
+      summaryEl.style.display = "block";
+      summaryEl.innerHTML =
+        "<div class='message-label'>Architecture Summary (" + ts + ")</div><div>" +
+        (data.summary || "No summary.") +
+        "</div>";
+
+      patternInfoEl.textContent = data.pattern_id
+        ? ("Selected pattern: " + data.pattern_id)
+        : "";
+
+      // Show diagram (force refresh with cache-busting query param)
+      if (data.image_url) {
+        diagramContainerEl.style.display = "block";
+
+        const fullUrl = data.image_url + "?t=" + Date.now();
+        diagramImageEl.src = fullUrl;
+        document.getElementById("openDiagramLink").href = fullUrl;
+      }
+
+      // Show DOT code
+      if (data.dot) {
+        dotAreaEl.style.display = "block";
+        dotTextEl.value = data.dot;
+      }
+
+      appendMessage(
+        "assistant",
+        "I've generated an architecture and diagram based on the full set of requirements so far."
+      );
+    } catch (err) {
+      console.error(err);
+      appendMessage("assistant", "Error calling backend: " + err.message);
+    } finally {
+      sendBtnEl.disabled = false;
+      sendBtnEl.textContent = "Generate";
+    }
+  }
+
+  sendBtnEl.addEventListener("click", sendMessage);
+  userInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+</script>
+</body>
+</html>
